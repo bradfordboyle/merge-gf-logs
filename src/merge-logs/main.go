@@ -1,24 +1,25 @@
 package main
 
 import (
-	"flag"
-	"merge-logs/mergedlog"
-	"container/list"
-	"regexp"
-	"log"
-	"strings"
-	"os"
 	"bufio"
-	"time"
-	"github.com/mgutz/ansi"
+	"container/list"
+	"flag"
 	"fmt"
+	"log"
+	"merge-logs/mergedlog"
+	"os"
+	"regexp"
 	"strconv"
+	"strings"
+	"time"
+
+	"github.com/mgutz/ansi"
 )
 
 var MAX_INT = int64(^uint64(0) >> 1)
 var FLUSH_BATCH_SIZE = 1000
 
-var stampFormat = "2006/01/02 15:04:05.000 MST"
+var stampFormat = "2006-01-02T15:04:05.999Z"
 var logs mergedlog.LogCollection
 var aggLog *list.List
 var lineCount = 0
@@ -49,7 +50,7 @@ func main() {
 		palette[0] = ansi.ColorCode("234") // blackish
 	}
 
-	gfeLogLineRE, err := regexp.Compile(`^\[\w+ (([^ ]* ){3}).*`)
+	gfeLogLineRE, err := regexp.Compile(`"timestamp":"([^"]+)"`)
 	if err != nil {
 		log.Fatalf("Invalid regex: %s", err)
 	}
@@ -62,7 +63,7 @@ func main() {
 	maxLogNameLength := 0
 	var logName, alias string
 	// Gather our files and set up a Scanner for each of them
-	for _, logTagName := range (flag.Args()) {
+	for _, logTagName := range flag.Args() {
 		parts := strings.Split(logTagName, ":")
 		alias = parts[0]
 
@@ -139,9 +140,9 @@ func flushLogs(highestStamp int64, aggLog *list.List, maxLogNameLength int) {
 	for e := aggLog.Front(); e != nil; e = aggLog.Front() {
 		line, _ := e.Value.(*mergedlog.LogLine)
 		if line.UTime < highestStamp {
-			format := "%s%" + strconv.Itoa(len(line.Alias) - maxLogNameLength) + "s[%s] %s%s\n"
+			format := "%s%" + strconv.Itoa(len(line.Alias)-maxLogNameLength) + "s[%s] %s%s\n"
 			if userColor != "off" {
-				fmt.Printf(format, line.Color,  "", line.Alias, line.Text, resetColor)
+				fmt.Printf(format, line.Color, "", line.Alias, line.Text, resetColor)
 			} else {
 				fmt.Printf(format, "", "", line.Alias, line.Text, "")
 			}
